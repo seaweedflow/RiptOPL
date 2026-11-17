@@ -93,6 +93,11 @@ public:
 
     // ---- ATA / PFS module latches -----------------------------------------------------------
     unsigned char forceUpdate = 0; // 0 at initial startup: use a valid games.bin; set after the first scan
+    // The PS2 (HDL) list's twin of vcdListBuilt. An L3 flip back to the PS2 list posts the same update
+    // as Refresh, and with forceUpdate latched after the first build every flip re-walked the whole APA
+    // table. While set, the update reuses the live hdlGames; only hddRequestHdlRescan (explicit Refresh)
+    // clears it. Cleared by teardown too, and left clear after a failed first build so it retries.
+    volatile unsigned char hdlListBuilt = 0;
     unsigned char hdProKitDetected = 0;
     unsigned char modulesLoadCount = 0;
     unsigned char modulesLoaded = 0;

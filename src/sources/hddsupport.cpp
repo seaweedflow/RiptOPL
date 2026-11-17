@@ -1459,6 +1459,7 @@ void HddSource::init(item_list_t *itemList)
 {
     LOG("HDDSUPPORT Init\n");
     gHddSupport.forceUpdate = 0;  // Use cache at initial startup.
+    gHddSupport.hdlListBuilt = 0;
     gHddSupport.vcdForceScan = 0; // ... for the PS1 list (vcdgames.bin) as well
     (*hddInstance()).delay = gArtDelay;
     ioPutRequest(IO_CUSTOM_SIMPLEACTION, reinterpret_cast<void *>(&HddSupport::initModulesEntry));
@@ -1994,6 +1995,13 @@ int HddSource::update(item_list_t *itemList)
             return gHddSupport.vcdGameCount;
     }
 
+    // An L3 flip back (or a Mixed list rebuild) while the PS2 list is already live: reuse it. Only
+    // Refresh (hddRequestHdlRescan) or a teardown sends this update back to games.bin / the APA walk.
+    if (gHddSupport.hdlListBuilt) {
+        hddDvrScan();
+        return view == LIB_VIEW_MIXED ? hddPs2GameCount() + gHddSupport.vcdGameCount : hddPs2GameCount();
+    }
+
     hdl_games_list_t cachedGames = {0};
     hdl_games_list_t hddGamesNew = {0};
     int cacheRet, scanRet = 0;
@@ -2010,11 +2018,13 @@ int HddSource::update(item_list_t *itemList)
     // cache is empty. Otherwise the initial boot may use the valid games.bin exactly as before.
     if (cacheRet == 0 && !gHddSupport.forceUpdate && cachedGames.count > 0) {
         gHddSupport.publishHdlGameList(&cachedGames);
+        gHddSupport.hdlListBuilt = 1;
     } else {
         scanRet = hddGetHDLGamelist(&hddGamesNew);
         if (scanRet == 0) {
             hddUpdateGameListCache(&cachedGames, &hddGamesNew);
             gHddSupport.publishHdlGameList(&hddGamesNew);
+            gHddSupport.hdlListBuilt = 1;
         } else {
             // Keep the last-good live list. On a first entry with no live list yet, a valid cache is
             // still a safer fallback than turning a transient scan failure into an empty page.
@@ -3132,6 +3142,7 @@ void HddSource::cleanUp(item_list_t *itemList, int exception)
         LOG("HDDSUPPORT CleanUp: art worker abandoned mid-read -- leaving pfs mounted\n");
         if ((*hddInstance()).enabled) {
             hddFreeHDLGamelist(&gHddSupport.hdlGames);
+        gHddSupport.hdlListBuilt = 0;
             gHddSupport.freeVcdGameList();
             hddDvrCleanUp(1); // never unmount beneath an abandoned reader
         }
@@ -3140,6 +3151,7 @@ void HddSource::cleanUp(item_list_t *itemList, int exception)
 
     if ((*hddInstance()).enabled) {
         hddFreeHDLGamelist(&gHddSupport.hdlGames);
+        gHddSupport.hdlListBuilt = 0;
         gHddSupport.freeVcdGameList();
         hddDvrCleanUp(exception & (KEEP_DVR_MOUNTS_EXCEPTION | KEEPIOP_EXCEPTION));
 
@@ -3190,6 +3202,7 @@ void HddSource::shutdown(item_list_t *itemList)
 
     if ((*hddInstance()).enabled) {
         hddFreeHDLGamelist(&gHddSupport.hdlGames);
+        gHddSupport.hdlListBuilt = 0;
         gHddSupport.freeVcdGameList();
         hddDvrCleanUp(0);
         fileXioUmount("pfs1:");
@@ -3402,6 +3415,12 @@ int hddModulesAreLoaded(void)
 void hddVcdInvalidateCache(void)
 {
     gHddSupport.invalidateVcdCache();
+}
+
+void hddRequestHdlRescan(void)
+{
+    gHddSupport.forceUpdate = 1;
+    gHddSupport.hdlListBuilt = 0;
 }
 
 int hddGetLiveOplHomeSelection(void)

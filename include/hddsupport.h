@@ -116,6 +116,8 @@ void hddFreePopsPartitionList(hdd_pops_list_t *list);
 // Drop the once-per-session HDD VCD list cache so the next VCD-view update re-walks the partitions.
 // Needed only when a SCAN-TIME filter changes (gVcdFirstDiscOnly); view flips reuse the built list.
 void hddVcdInvalidateCache(void);
+// Explicit Refresh: the next PS2-list update walks the APA table instead of reusing the live list.
+void hddRequestHdlRescan(void);
 
 void hddInit(item_list_t *itemList);
 item_list_t *hddGetObject(int initOnly);
