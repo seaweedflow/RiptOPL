@@ -148,6 +148,11 @@ public:
     // if no invalidation arrived since it started.
     unsigned char vcdListBuilt = 0;
     volatile unsigned int vcdCacheGen = 0;
+    // vcdgames.bin, the PS1 twin of games.bin (gated on the same HDD game list cache setting): a
+    // build with this clear may publish the saved list instead of walking the drive. 0 at
+    // HddSource::init; set by invalidateVcdCache (explicit Refresh, rename, scan-time filter
+    // changes) so those always rescan; cleared again once a build has consumed it.
+    volatile unsigned char vcdForceScan = 0;
     // The split-store sentinels returned by activeVcd/activeHdl.
     base_game_info_t emptyVcd = {.extension = ".VCD"};
     hdl_game_info_t emptyHdl = {0};
