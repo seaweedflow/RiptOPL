@@ -1522,7 +1522,7 @@ static void hddVcdCachePath(char *out, int outSize)
 }
 
 // Returns 0 and publishes the saved list, or nonzero (nothing published) when there is no usable cache.
-static int hddLoadVcdListCache(void)
+int HddSupport::loadVcdListCache()
 {
     char filename[256];
     hdd_vcd_cache_hdr_t hdr, want;
@@ -1574,7 +1574,7 @@ static int hddLoadVcdListCache(void)
             gVcdSupport.noteScanDir(games[i].name, "pfs1:/");
     }
 
-    gHddSupport.publishVcdGameList(games, parts, count, 1);
+    publishVcdGameList(games, parts, count, 1);
     LOG("HDD VCD cache: %d PS1 game(s) loaded from %s\n", count, filename);
     return 0;
 }
@@ -1985,7 +1985,7 @@ int HddSource::update(item_list_t *itemList)
         // saved vcdgames.bin first, as the PS2 list does with games.bin.
         if (!gHddSupport.vcdListBuilt) {
             unsigned int gen = gHddSupport.vcdCacheGen;
-            if (gHddSupport.vcdForceScan || hddLoadVcdListCache() != 0)
+            if (gHddSupport.vcdForceScan || gHddSupport.loadVcdListCache() != 0)
                 gHddSupport.buildVcdGameList();
             if (gen == gHddSupport.vcdCacheGen)
                 gHddSupport.vcdForceScan = 0; // consumed, unless another invalidation raced this build
